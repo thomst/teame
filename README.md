@@ -86,7 +86,7 @@ Examples
 
 
 ```
-$ **teame -l my-pattern**
+$ teame -l my-pattern
 repo-with-my-pattern-in-name
 another-repo-with-my-pattern-in-name
 ```
@@ -99,23 +99,20 @@ Teame uses `tea repos search` to get a list of repositories filtered by the sear
 ### Clone or pull repositories
 
 ```
-$ **teame.sh -g my-pattern**
+$ teame.sh -g my-pattern
 [SUCCESS][PULLED] repo-with-my-pattern-in-name
 [SUCCESS][CLONED] another-repo-with-my-pattern-in-name
 ```
 
 #### Explanation
 
-*   Teame gets a list of repositories from the gitea server filtered by the search pattern.
-*   And then depending on the fact that the repository already exists in the current working directory teame either
-    *   clones the repository or
-    *   pulls it.
+Working with the filtered list of repositories retrieved from the gitea server teame either clones or pulls the repository depending on the fact that the repository already exists in the current working directory or not.
 
 
 ### Show repository status
 
 ```
-$ **teame.sh -s my-pattern**
+$ teame.sh -s my-pattern
 [SUCCESS][STATUS] repo-with-my-pattern-in-name
  D deleted-file
 ?? new-file
