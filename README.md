@@ -68,14 +68,17 @@ Get or update repositories from gitea.
 
 actions:
     -l              list repositories
-    -g              get or update repositories
+    -g              clone or pull repositories
+    -c              clone repositories (that does not exist in cwd)
+    -p              pull repositories (that exists in cwd)
     -s              print status of repositories
     -h              print help-message
 
 options:
+    -o              use repository owner as subdirectories
     -d [DIR]        working directory (default: current working directory)
     -u [LOGIN]      tea login (default: current unix user)
-    -p [COUNT]      count of parallel processes (default: 8)
+    -C [COUNT]      count of parallel processes (default: 8)
 ```
 
 
