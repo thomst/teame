@@ -89,6 +89,34 @@ function get_list_of_repositories {
 
 
 # FUNCTION ---------------------------------------------------------------------
+# NAME:         get_repository_status
+# DESCRIPTION:  Print repository status in machine readable format.
+# PARAMETER 1:  [str] repository name
+# OUTPUT:       Print informations about what has been done.
+# ------------------------------------------------------------------------------
+function get_repository_status {
+    name="$1"
+    if [ ! -d "$CWD/$name/.git" ]; then
+        echo -e "${MSG_ERROR}${MSG_STATUS}[$name] missing repository"
+        return
+    fi
+    pushd "$CWD/$name" > /dev/null || exit
+    if output="$(git status --porcelain 2>&1)"; then
+        if [ -n "$output" ]; then
+            echo -e "${MSG_SUCCESS}${MSG_STATUS} $name"
+            echo "$output"
+        else
+            echo -e "${MSG_SUCCESS}${MSG_CLEAN} $name"
+        fi
+    else
+        echo -e "${MSG_ERROR}${MSG_STATUS} $name"
+        echo "$output"
+    fi
+    popd > /dev/null || exit
+}
+
+
+# FUNCTION ---------------------------------------------------------------------
 # NAME:         pull_repository
 # DESCRIPTION:  Update a repository found in the current working directory by
 #               pulling from the remote repository.
@@ -131,34 +159,6 @@ function clone_repository {
         echo -e "${MSG_SUCCESS}${MSG_CLONED} $name"
     else
         echo -e "${MSG_ERROR}${MSG_CLONED} $name"
-        echo "$output"
-    fi
-    popd > /dev/null || exit
-}
-
-
-# FUNCTION ---------------------------------------------------------------------
-# NAME:         get_repository_status
-# DESCRIPTION:  Print repository status in machine readable format.
-# PARAMETER 1:  [str] repository name
-# OUTPUT:       Print informations about what has been done.
-# ------------------------------------------------------------------------------
-function get_repository_status {
-    name="$1"
-    if [ ! -d "$CWD/$name/.git" ]; then
-        echo -e "${MSG_ERROR}${MSG_STATUS}[$name] missing repository"
-        return
-    fi
-    pushd "$CWD/$name" > /dev/null || exit
-    if output="$(git status --porcelain 2>&1)"; then
-        if [ -n "$output" ]; then
-            echo -e "${MSG_SUCCESS}${MSG_STATUS} $name"
-            echo "$output"
-        else
-            echo -e "${MSG_SUCCESS}${MSG_CLEAN} $name"
-        fi
-    else
-        echo -e "${MSG_ERROR}${MSG_STATUS} $name"
         echo "$output"
     fi
     popd > /dev/null || exit
