@@ -100,20 +100,20 @@ function get_list_of_repositories {
 # ------------------------------------------------------------------------------
 function get_repository_status {
     name="$1"
-    if [ ! -d "$BASE_DIR/$name/.git" ]; then
-        echo -e "${MSG_INFO}${MSG_MISSING} $name"
+    if [ ! -d "$CWD/${BASE_DIR}$name/.git" ]; then
+        echo -e "${MSG_INFO}${MSG_MISSING} ${BASE_DIR}$name"
         return
     fi
-    pushd "$BASE_DIR/$name" > /dev/null || exit
+    pushd "$CWD/${BASE_DIR}$name" > /dev/null || exit
     if output="$(git status --porcelain 2>&1)"; then
         if [ -n "$output" ]; then
-            echo -e "${MSG_SUCCESS}${MSG_STATUS} $name"
+            echo -e "${MSG_SUCCESS}${MSG_STATUS} ${BASE_DIR}$name"
             echo "$output"
         else
-            echo -e "${MSG_SUCCESS}${MSG_CLEAN} $name"
+            echo -e "${MSG_SUCCESS}${MSG_CLEAN} ${BASE_DIR}$name"
         fi
     else
-        echo -e "${MSG_ERROR}${MSG_STATUS} $name"
+        echo -e "${MSG_ERROR}${MSG_STATUS} ${BASE_DIR}$name"
         echo "$output"
     fi
     popd > /dev/null || exit
@@ -129,15 +129,15 @@ function get_repository_status {
 # ------------------------------------------------------------------------------
 function pull_repository {
     name="$1"
-    if [ ! -d "$BASE_DIR/$name/.git" ]; then
-        echo -e "${MSG_INFO}${MSG_MISSING} $name"
+    if [ ! -d "$CWD/${BASE_DIR}$name/.git" ]; then
+        echo -e "${MSG_INFO}${MSG_MISSING} ${BASE_DIR}$name"
         return
     fi
-    pushd "$BASE_DIR/$name" > /dev/null || exit
+    pushd "$CWD/${BASE_DIR}$name" > /dev/null || exit
     if output="$(git pull 2>&1)"; then
-        echo -e "${MSG_SUCCESS}${MSG_PULLED} $name"
+        echo -e "${MSG_SUCCESS}${MSG_PULLED} ${BASE_DIR}$name"
     else
-        echo -e "${MSG_ERROR}${MSG_PULLED} $name"
+        echo -e "${MSG_ERROR}${MSG_PULLED} ${BASE_DIR}$name"
         echo "$output"
     fi
     popd > /dev/null || exit
@@ -154,18 +154,18 @@ function pull_repository {
 function clone_repository {
     name="$1"
     ssh_address="$2"
-    if [ -d "$BASE_DIR/$name/.git" ]; then
-        echo -e "${MSG_INFO}${MSG_EXISTS} $name"
+    if [ -d "$CWD/${BASE_DIR}$name/.git" ]; then
+        echo -e "${MSG_INFO}${MSG_EXISTS} ${BASE_DIR}$name"
         return
     fi
-    if [ ! -d "$BASE_DIR" ]; then
-        mkdir "$BASE_DIR"
+    if [ ! -d "$CWD/$BASE_DIR" ]; then
+        mkdir "$CWD/$BASE_DIR"
     fi
-    pushd "$BASE_DIR" > /dev/null || exit
+    pushd "$CWD/$BASE_DIR" > /dev/null || exit
     if output="$(git clone "$ssh_address" 2>&1)"; then
-        echo -e "${MSG_SUCCESS}${MSG_CLONED} $name"
+        echo -e "${MSG_SUCCESS}${MSG_CLONED} ${BASE_DIR}$name"
     else
-        echo -e "${MSG_ERROR}${MSG_CLONED} $name"
+        echo -e "${MSG_ERROR}${MSG_CLONED} ${BASE_DIR}$name"
         echo "$output"
     fi
     popd > /dev/null || exit
@@ -183,7 +183,7 @@ function clone_repository {
 function clone_or_pull_repository {
     name="$1"
     ssh_address="$2"
-    if [ -d "$BASE_DIR/$name/.git" ]; then
+    if [ -d "$CWD/${BASE_DIR}$name/.git" ]; then
         pull_repository "$name"
     else
         clone_repository "$name" "$ssh_address"
@@ -210,9 +210,9 @@ function process_repositories {
         # Select base directory of repository.
         #-----------------------------------------------------------------------
         if [ -n "$USE_OWNER_AS_SUBDIR" ]; then
-            BASE_DIR="$CWD/$owner"
+            BASE_DIR="$owner/"
         else
-            BASE_DIR="$CWD"
+            BASE_DIR=
         fi
 
         #-----------------------------------------------------------------------
