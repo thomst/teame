@@ -11,25 +11,29 @@ Get or update repositories from gitea.
 
 actions:
     -l              list repositories
-    -g              get or update repositories
+    -g              clone or pull repositories
+    -c              clone repositories (that does not exist in cwd)
+    -p              pull repositories (that exists in cwd)
     -s              print status of repositories
     -h              print help-message
 
 options:
     -d [DIR]        working directory (default: current working directory)
     -u [LOGIN]      tea login (default: current unix user)
-    -p [COUNT]      count of parallel processes (default: 8)
+    -C [COUNT]      count of parallel processes (default: 8)
 "
 
-while getopts lgsd:u:p:h opt
+while getopts lgcpsd:u:C:h opt
 do
     case $opt in
         l)  LIST_REPO=true;;
-        g)  GET_OR_UPDATE_REPO=true;;
+        g)  CLONE_OR_PULL_REPO=true;;
+        c)  CLONE_REPO=true;;
+        p)  PULL_REPO=true;;
         s)  GET_REPO_STATUS=true;;
         d)  CWD=$OPTARG;;
         u)  LOGIN=$OPTARG;;
-        p)  PROCESS_POOL=$OPTARG;;
+        C)  PROCESS_POOL=$OPTARG;;
         h)  echo "$USAGE"; exit 0;;
         \?) echo "$USAGE"; exit 1;;
         :)  echo "$USAGE"; exit 1;;
@@ -51,6 +55,7 @@ PROCESS_POOL="${PROCESS_POOL:-8}"
 RTE_PIDS=()
 MSG_ERROR="\r\e[31m[ERROR]\e[0m"
 MSG_SUCCESS="\r\e[32m[SUCCESS]\e[0m"
+MSG_INFO="\r\e[36m[INFO]\e[0m"
 MSG_PULLED="\e[33m[PULLED]\e[0m"
 MSG_CLONED="\e[33m[CLONED]\e[0m"
 MSG_STATUS="\e[33m[STATUS]\e[0m"
@@ -84,16 +89,16 @@ function get_list_of_repositories {
 
 
 # FUNCTION ---------------------------------------------------------------------
-# NAME:         update_repository
+# NAME:         pull_repository
 # DESCRIPTION:  Update a repository found in the current working directory by
 #               pulling from the remote repository.
 # PARAMETER 1:  [str] repository name
 # OUTPUT:       Print informations about what has been done.
 # ------------------------------------------------------------------------------
-function update_repository {
+function pull_repository {
     name="$1"
     if [ ! -d "$CWD/$name/.git" ]; then
-        echo -e "${MSG_ERROR}${MSG_PULLED}[$name] missing repository"
+        echo -e "${MSG_INFO}${MSG_PULLED}[$name] missing repository"
         return
     fi
     pushd "$CWD/$name" > /dev/null || exit
@@ -118,7 +123,7 @@ function clone_repository {
     name="$1"
     ssh_address="$2"
     if [ -d "$CWD/$name/.git" ]; then
-        echo -e "${MSG_ERROR}${MSG_CLONED}[$name] repository already exists"
+        echo -e "${MSG_INFO}${MSG_CLONED}[$name] repository already exists"
         return
     fi
     pushd "$CWD" > /dev/null || exit
@@ -161,18 +166,18 @@ function get_repository_status {
 
 
 # FUNCTION ---------------------------------------------------------------------
-# NAME:         get_or_update_repository
-# DESCRIPTION:  Call update_repository or clone_repository depending on if the
+# NAME:         clone_or_pull_repository
+# DESCRIPTION:  Call pull_repository or clone_repository depending on if the
 #               repository already exists in the current working directory or
 #               not.
 # PARAMETER 1:  [str] repository name
 # PARAMETER 2:  [str] repository ssh address
 # ------------------------------------------------------------------------------
-function get_or_update_repository {
+function clone_or_pull_repository {
     name="$1"
     ssh_address="$2"
     if [ -d "$CWD/$name/.git" ]; then
-        update_repository "$name"
+        pull_repository "$name"
     else
         clone_repository "$name" "$ssh_address"
     fi
@@ -196,8 +201,12 @@ function process_repositories {
         # Process repositories within a background process for parallelization.
         #-----------------------------------------------------------------------
         (
-            if [ -n "$GET_OR_UPDATE_REPO" ]; then
-                output="$(get_or_update_repository "$name" "$ssh_address" 2>&1)"
+            if [ -n "$CLONE_OR_PULL_REPO" ]; then
+                output="$(clone_or_pull_repository "$name" "$ssh_address" 2>&1)"
+            elif [ -n "$CLONE_REPO" ]; then
+                output="$(clone_repository "$name" "$ssh_address" 2>&1)"
+            elif [ -n "$PULL_REPO" ]; then
+                output="$(pull_repository "$name" "$ssh_address" 2>&1)"
             elif [ -n "$GET_REPO_STATUS" ]; then
                 output="$(get_repository_status "$name"  2>&1)"
             fi
@@ -236,6 +245,6 @@ function process_repositories {
 #-------------------------------------------------------------------------------
 if [ -n "$LIST_REPO" ]; then
     get_list_of_repositories "$PATTERN" | cut --fields=1 --delimiter=' '
-elif [ -n "$GET_OR_UPDATE_REPO" ] || [ -n "$GET_REPO_STATUS" ]; then
+elif [ -n "$CLONE_REPO" ] || [ -n "$PULL_REPO" ] || [ -n "$CLONE_OR_PULL_REPO" ] || [ -n "$GET_REPO_STATUS" ]; then
     get_list_of_repositories "$PATTERN" | process_repositories
 fi
