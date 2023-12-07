@@ -60,6 +60,8 @@ MSG_PULLED="\e[33m[PULLED]\e[0m"
 MSG_CLONED="\e[33m[CLONED]\e[0m"
 MSG_STATUS="\e[33m[STATUS]\e[0m"
 MSG_CLEAN="\e[33m[CLEAN]\e[0m"
+MSG_MISSING="\e[33m[MISSING]\e[0m"
+MSG_EXISTS="\e[33m[EXISTS]\e[0m"
 
 
 # FUNCTION ---------------------------------------------------------------------
@@ -97,7 +99,7 @@ function get_list_of_repositories {
 function get_repository_status {
     name="$1"
     if [ ! -d "$CWD/$name/.git" ]; then
-        echo -e "${MSG_ERROR}${MSG_STATUS}[$name] missing repository"
+        echo -e "${MSG_INFO}${MSG_MISSING} $name"
         return
     fi
     pushd "$CWD/$name" > /dev/null || exit
@@ -126,7 +128,7 @@ function get_repository_status {
 function pull_repository {
     name="$1"
     if [ ! -d "$CWD/$name/.git" ]; then
-        echo -e "${MSG_INFO}${MSG_PULLED}[$name] missing repository"
+        echo -e "${MSG_INFO}${MSG_MISSING} $name"
         return
     fi
     pushd "$CWD/$name" > /dev/null || exit
@@ -151,7 +153,7 @@ function clone_repository {
     name="$1"
     ssh_address="$2"
     if [ -d "$CWD/$name/.git" ]; then
-        echo -e "${MSG_INFO}${MSG_CLONED}[$name] repository already exists"
+        echo -e "${MSG_INFO}${MSG_EXISTS} $name"
         return
     fi
     pushd "$CWD" > /dev/null || exit
