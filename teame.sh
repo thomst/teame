@@ -18,12 +18,13 @@ actions:
     -h              print help-message
 
 options:
+    -o              use repository owner as subdirectories
     -d [DIR]        working directory (default: current working directory)
     -u [LOGIN]      tea login (default: current unix user)
     -C [COUNT]      count of parallel processes (default: 8)
 "
 
-while getopts lgcpsd:u:C:h opt
+while getopts lgcpsod:u:C:h opt
 do
     case $opt in
         l)  LIST_REPO=true;;
@@ -31,6 +32,7 @@ do
         c)  CLONE_REPO=true;;
         p)  PULL_REPO=true;;
         s)  GET_REPO_STATUS=true;;
+        o)  USE_OWNER_AS_SUBDIR=true;;
         d)  CWD=$OPTARG;;
         u)  LOGIN=$OPTARG;;
         C)  PROCESS_POOL=$OPTARG;;
@@ -77,7 +79,7 @@ function get_list_of_repositories {
     index=0
     while true; do
         index=$((index+1))
-        mapfile -t page < <(tea repos search --login="$LOGIN" --page=$index --output=simple --fields=name,ssh "$pattern")
+        mapfile -t page < <(tea repos search --login="$LOGIN" --page=$index --output=simple --fields=name,owner,ssh "$pattern")
         if [ -n "${page[*]}" ]; then
             repos+=("${page[@]}")
         else
@@ -98,11 +100,11 @@ function get_list_of_repositories {
 # ------------------------------------------------------------------------------
 function get_repository_status {
     name="$1"
-    if [ ! -d "$CWD/$name/.git" ]; then
+    if [ ! -d "$BASE_DIR/$name/.git" ]; then
         echo -e "${MSG_INFO}${MSG_MISSING} $name"
         return
     fi
-    pushd "$CWD/$name" > /dev/null || exit
+    pushd "$BASE_DIR/$name" > /dev/null || exit
     if output="$(git status --porcelain 2>&1)"; then
         if [ -n "$output" ]; then
             echo -e "${MSG_SUCCESS}${MSG_STATUS} $name"
@@ -127,11 +129,11 @@ function get_repository_status {
 # ------------------------------------------------------------------------------
 function pull_repository {
     name="$1"
-    if [ ! -d "$CWD/$name/.git" ]; then
+    if [ ! -d "$BASE_DIR/$name/.git" ]; then
         echo -e "${MSG_INFO}${MSG_MISSING} $name"
         return
     fi
-    pushd "$CWD/$name" > /dev/null || exit
+    pushd "$BASE_DIR/$name" > /dev/null || exit
     if output="$(git pull 2>&1)"; then
         echo -e "${MSG_SUCCESS}${MSG_PULLED} $name"
     else
@@ -152,11 +154,14 @@ function pull_repository {
 function clone_repository {
     name="$1"
     ssh_address="$2"
-    if [ -d "$CWD/$name/.git" ]; then
+    if [ -d "$BASE_DIR/$name/.git" ]; then
         echo -e "${MSG_INFO}${MSG_EXISTS} $name"
         return
     fi
-    pushd "$CWD" > /dev/null || exit
+    if [ ! -d "$BASE_DIR" ]; then
+        mkdir "$BASE_DIR"
+    fi
+    pushd "$BASE_DIR" > /dev/null || exit
     if output="$(git clone "$ssh_address" 2>&1)"; then
         echo -e "${MSG_SUCCESS}${MSG_CLONED} $name"
     else
@@ -178,7 +183,7 @@ function clone_repository {
 function clone_or_pull_repository {
     name="$1"
     ssh_address="$2"
-    if [ -d "$CWD/$name/.git" ]; then
+    if [ -d "$BASE_DIR/$name/.git" ]; then
         pull_repository "$name"
     else
         clone_repository "$name" "$ssh_address"
@@ -196,8 +201,19 @@ function clone_or_pull_repository {
 # ------------------------------------------------------------------------------
 function process_repositories {
     while [ -z "$RTE_LOOP_STOP" ] && read -r line; do
-        name="${line% *}"
-        ssh_address="${line#* }"
+        mapfile -d' ' -t repo <<< "$line"
+        name="${repo[0]}"
+        owner="${repo[1]}"
+        ssh_address="${repo[2]}"
+
+        #-----------------------------------------------------------------------
+        # Select base directory of repository.
+        #-----------------------------------------------------------------------
+        if [ -n "$USE_OWNER_AS_SUBDIR" ]; then
+            BASE_DIR="$CWD/$owner"
+        else
+            BASE_DIR="$CWD"
+        fi
 
         #-----------------------------------------------------------------------
         # Process repositories within a background process for parallelization.
